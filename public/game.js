@@ -15,7 +15,7 @@ let announcementTimer = null
 
 const SIGNALING_SERVERS = [
   'wss://code-breaker.aliah.university/signaling',
-  'https://code-breaker-3es.pages.dev',
+  'wss://code-breaker-3es.pages.dev/signaling',
 ]
 
 function init() {
