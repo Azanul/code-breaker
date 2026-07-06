@@ -14,7 +14,7 @@ let prevPlayerCount = 0
 let announcementTimer = null
 
 // const SELF_SIGNALING = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/signaling`
-const SELF_SIGNALING = 'https://code-breaker.aliah.university/signaling'
+const SELF_SIGNALING = 'wss://code-breaker.aliah.university/signaling'
 const SIGNALING_SERVERS = [
   SELF_SIGNALING,
   'wss://signaling.yjs.dev',
