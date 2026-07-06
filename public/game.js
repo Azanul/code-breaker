@@ -16,10 +16,6 @@ let announcementTimer = null
 const SIGNALING_SERVERS = [
   'wss://code-breaker.aliah.university/signaling',
   'https://code-breaker-3es.pages.dev',
-  'wss://signaling.yjs.dev',
-  'wss://y-webrtc-signaling-eu.fly.dev',
-  'wss://y-webrtc-signaling-eu.herokuapp.com',
-  'wss://y-webrtc-signaling-us.herokuapp.com'
 ]
 
 function init() {
