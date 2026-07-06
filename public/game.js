@@ -13,7 +13,10 @@ let joined = false
 let prevPlayerCount = 0
 let announcementTimer = null
 
+const SELF_SIGNALING = `${location.protocol === 'https:' ? 'wss:' : 'ws:'}//${location.host}/signaling`
+
 const SIGNALING_SERVERS = [
+  SELF_SIGNALING,
   'wss://signaling.yjs.dev',
   'wss://y-webrtc-signaling-eu.fly.dev',
   'wss://y-webrtc-signaling-eu.herokuapp.com',
