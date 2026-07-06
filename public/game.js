@@ -10,6 +10,8 @@ let mySecretSet = false
 let doc = null
 let provider = null
 let joined = false
+let prevPlayerCount = 0
+let announcementTimer = null
 
 const SIGNALING_SERVERS = ['wss://signaling.yjs.dev', 'wss://y-webrtc-signaling-eu.fly.dev']
 
@@ -64,6 +66,16 @@ function joinGame() {
   })
 
   const players = state.get('players')
+
+  const existingCount = players.size
+  const iAmInside = players.has(myId)
+
+  if (existingCount >= 2 && !iAmInside) {
+    joined = false
+    showRoomFullError()
+    return
+  }
+
   doc.transact(() => {
     const p = new Y.Map()
     p.set('name', myName)
@@ -71,16 +83,13 @@ function joinGame() {
     players.set(myId, p)
   })
 
+  prevPlayerCount = players.size
+
   state.observeDeep(() => {
     updateUI()
     processGuesses()
     checkGameStart()
-  })
-
-  provider.on('peers', ({ added }) => {
-    if (added.length > 0) {
-      provider.synced = true
-    }
+    checkPlayerCount()
   })
 
   $('my-name-display').textContent = myName
@@ -110,15 +119,23 @@ function updateUI() {
     $('opponent-name-guess').textContent = players.get(opponentId).get('name')
   }
 
+  if ($('room-full-overlay') && !$('room-full-overlay').classList.contains('hidden')) {
+    return
+  }
+
   if (phase === 'lobby' || !phase) {
     $('setting-phase')?.classList.add('hidden')
     $('playing-phase')?.classList.add('hidden')
-    if ((!players || players.size < 2) && joined) {
-      const status = $('lobby-status')
-      if (status) status.textContent = '⏳ Waiting for opponent to join...'
-    }
-    if (players && players.size >= 2) {
+
+    const pCount = players ? players.size : 0
+    const announcementVisible = $('join-announcement') && !$('join-announcement').classList.contains('hidden')
+
+    if (!announcementVisible && pCount >= 2) {
+      showAnnouncement()
       doc.transact(() => state.set('phase', 'setting'))
+    } else if (pCount < 2 && joined) {
+      const status = $('lobby-status')
+      if (status) status.textContent = '> WAITING FOR OPPONENT...'
     }
     return
   }
@@ -128,7 +145,7 @@ function updateUI() {
     $('playing-phase').classList.add('hidden')
 
     if (mySecretSet) {
-      $('secret-status').textContent = '✅ Your number is locked in!'
+      $('secret-status').textContent = '> CODE LOCKED'
       $('set-secret-btn').disabled = true
       $('secret-input').disabled = true
     }
@@ -161,13 +178,13 @@ function updateUI() {
     if (myTurn) {
       guessSection.classList.remove('hidden')
       guessSection.querySelector('.card').classList.add('my-turn')
-      $('turn-indicator').textContent = '🎯 Your Turn!'
+      $('turn-indicator').textContent = '>> YOUR TURN'
       $('guess-input').disabled = false
       $('guess-btn').disabled = false
       $('guess-input').focus()
     } else {
       guessSection.querySelector('.card').classList.remove('my-turn')
-      $('turn-indicator').textContent = `💭 ${getOpponentName() || 'Opponent'}'s Turn...`
+      $('turn-indicator').textContent = `> ${(getOpponentName() || 'OPPONENT').toUpperCase()}'S MOVE`
       $('guess-input').disabled = true
       $('guess-btn').disabled = true
     }
@@ -202,10 +219,10 @@ function renderHistory() {
     const targetName = target === myId ? myName : getOpponentName() || 'Opponent'
 
     let resultClass = 'result-pending'
-    let resultText = '⏳'
-    if (result === 'higher') { resultClass = 'result-higher'; resultText = '⬆ Higher' }
-    else if (result === 'lower') { resultClass = 'result-lower'; resultText = '⬇ Lower' }
-    else if (result === 'correct') { resultClass = 'result-correct'; resultText = '🎉 Correct!' }
+    let resultText = '??'
+    if (result === 'higher') { resultClass = 'result-higher'; resultText = 'HIGHER' }
+    else if (result === 'lower') { resultClass = 'result-lower'; resultText = 'LOWER' }
+    else if (result === 'correct') { resultClass = 'result-correct'; resultText = 'HIT' }
 
     const div = document.createElement('div')
     div.className = 'history-item'
@@ -266,12 +283,12 @@ function checkGameStart() {
 function setSecret() {
   const val = parseInt($('secret-input').value)
   if (isNaN(val) || val < 1 || val > 100) {
-    $('secret-status').textContent = '⚠️ Pick a number between 1 and 100'
+    $('secret-status').textContent = '> INVALID CODE (1-100)'
     return
   }
   mySecret = val
   mySecretSet = true
-  $('secret-status').textContent = '✅ Number locked!'
+  $('secret-status').textContent = '> CODE LOCKED'
   $('set-secret-btn').disabled = true
   $('secret-input').disabled = true
 
@@ -291,7 +308,7 @@ function submitGuess() {
 
   const val = parseInt($('guess-input').value)
   if (isNaN(val) || val < 1 || val > 100) {
-    $('guess-status').textContent = '⚠️ Enter a number between 1 and 100'
+    $('guess-status').textContent = '> INVALID TARGET (1-100)'
     return
   }
 
@@ -320,23 +337,23 @@ function showResult(winnerId) {
   card.id = winnerId === myId ? 'win-card' : 'lose-card'
 
   if (winnerId === myId) {
-    overlay.querySelector('h1').textContent = '🎉 You Win!'
-    overlay.querySelector('p').textContent = 'You cracked their code!'
-    overlay.querySelector('#secret-reveal').textContent = 'Their secret was revealed!'
+    overlay.querySelector('h1').textContent = 'YOU WIN'
+    overlay.querySelector('p').textContent = 'CODE CRACKED'
+    overlay.querySelector('#secret-reveal').textContent = 'THEIR CODE: REVEALED'
     spawnConfetti()
   } else {
-    overlay.querySelector('h1').textContent = '😅 You Lose!'
-    overlay.querySelector('p').textContent = 'They cracked your code!'
+    overlay.querySelector('h1').textContent = 'YOU LOSE'
+    overlay.querySelector('p').textContent = 'THEY CRACKED YOUR CODE'
     overlay.querySelector('#secret-reveal').textContent = mySecret !== null
-      ? `Your secret was ${mySecret}`
-      : 'Your secret was ?'
+      ? `YOUR CODE: ${mySecret}`
+      : 'YOUR CODE: ??'
   }
 }
 
 function spawnConfetti() {
   const container = $('confetti-container')
   container.innerHTML = ''
-  const colors = ['#7c4dff', '#ff4081', '#00e676', '#ff6f00', '#00bcd4', '#ffcc02', '#e040fb']
+  const colors = ['#818cf8', '#ff2d55', '#34d399', '#fbbf24', '#22d3ee', '#a78bfa', '#fb7185']
   for (let i = 0; i < 60; i++) {
     const piece = document.createElement('div')
     piece.className = 'confetti-piece'
@@ -345,7 +362,7 @@ function spawnConfetti() {
     piece.style.background = colors[Math.floor(Math.random() * colors.length)]
     piece.style.width = (Math.random() * 8 + 4) + 'px'
     piece.style.height = (Math.random() * 8 + 4) + 'px'
-    piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px'
+    piece.style.borderRadius = '1px'
     piece.style.animationDuration = (Math.random() * 2 + 2) + 's'
     piece.style.animationDelay = (Math.random() * 1.5) + 's'
     container.appendChild(piece)
@@ -377,6 +394,8 @@ function resetGame() {
   })
   mySecret = null
   mySecretSet = false
+  prevPlayerCount = 0
+  hideAnnouncement()
   $('result-overlay').classList.add('hidden')
   $('secret-input').value = ''
   $('secret-input').disabled = false
@@ -385,6 +404,59 @@ function resetGame() {
   $('guess-input').value = ''
   $('guess-status').textContent = ''
   $('confetti-container').innerHTML = ''
+}
+
+function checkPlayerCount() {
+  const state = doc?.getMap('state')
+  if (!state || !joined) return
+  const players = state.get('players')
+  if (!players) return
+
+  const pCount = players.size
+  const iAmInside = players.has(myId)
+
+  if (pCount > 2 && iAmInside) {
+    showRoomFullError()
+    return
+  }
+
+  if (pCount === 2 && prevPlayerCount === 1) {
+    showAnnouncement()
+  }
+
+  prevPlayerCount = pCount
+}
+
+function showAnnouncement() {
+  if (announcementTimer) return
+  const banner = $('join-announcement')
+  if (!banner) return
+  const opponentName = getOpponentName()
+  $('announcement-text').textContent = opponentName
+    ? `> ${opponentName.toUpperCase()} HAS JOINED THE GAME`
+    : '> BOTH PLAYERS CONNECTED'
+  banner.classList.remove('hidden')
+  announcementTimer = setTimeout(() => {
+    hideAnnouncement()
+  }, 3000)
+}
+
+function hideAnnouncement() {
+  $('join-announcement')?.classList.add('hidden')
+  if (announcementTimer) {
+    clearTimeout(announcementTimer)
+    announcementTimer = null
+  }
+}
+
+function showRoomFullError() {
+  const overlay = $('room-full-overlay')
+  if (overlay) {
+    overlay.classList.remove('hidden')
+  }
+  $('room-full-leave-btn')?.addEventListener('click', () => {
+    location.reload()
+  })
 }
 
 function getOpponentId() {
