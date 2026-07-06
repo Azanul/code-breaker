@@ -42,7 +42,7 @@ export async function onRequest(context) {
               msg.clients = receivers.size
               const data = JSON.stringify(msg)
               for (const receiver of receivers) {
-                try { receiver.send(data) } catch {}
+                try { receiver.send(data) } catch { }
               }
             }
           }
@@ -52,7 +52,7 @@ export async function onRequest(context) {
           server.send(JSON.stringify({ type: 'pong' }))
           break
       }
-    } catch {}
+    } catch { }
   })
 
   server.addEventListener('close', () => {
