@@ -13,7 +13,12 @@ let joined = false
 let prevPlayerCount = 0
 let announcementTimer = null
 
-const SIGNALING_SERVERS = ['wss://signaling.yjs.dev', 'wss://y-webrtc-signaling-eu.fly.dev']
+const SIGNALING_SERVERS = [
+  'wss://signaling.yjs.dev',
+  'wss://y-webrtc-signaling-eu.fly.dev',
+  'wss://y-webrtc-signaling-eu.herokuapp.com',
+  'wss://y-webrtc-signaling-us.herokuapp.com'
+]
 
 function init() {
   $('name-input').addEventListener('input', validateLobby)
