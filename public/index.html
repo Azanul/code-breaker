@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Code Break</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>🫧</text></svg>">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<div class="bubbles">
+  <div class="bubble" style="--x:10%;--s:60px;--d:8s;--dl:2s"></div>
+  <div class="bubble" style="--x:25%;--s:40px;--d:10s;--dl:0s"></div>
+  <div class="bubble" style="--x:40%;--s:80px;--d:7s;--dl:1s"></div>
+  <div class="bubble" style="--x:55%;--s:35px;--d:12s;--dl:3s"></div>
+  <div class="bubble" style="--x:70%;--s:70px;--d:9s;--dl:0.5s"></div>
+  <div class="bubble" style="--x:85%;--s:50px;--d:11s;--dl:2.5s"></div>
+  <div class="bubble" style="--x:15%;--s:25px;--d:6s;--dl:4s"></div>
+  <div class="bubble" style="--x:50%;--s:45px;--d:13s;--dl:1.5s"></div>
+  <div class="bubble" style="--x:75%;--s:55px;--d:8.5s;--dl:3.5s"></div>
+  <div class="bubble" style="--x:90%;--s:30px;--d:10.5s;--dl:0.8s"></div>
+  <div class="bubble" style="--x:35%;--s:65px;--d:7.5s;--dl:2.2s"></div>
+  <div class="bubble" style="--x:60%;--s:38px;--d:11.5s;--dl:4.5s"></div>
+</div>
+
+<div id="app">
+  <div id="lobby-screen" class="screen">
+    <div class="logo">
+      <span class="logo-icon">🫧</span>
+      <h1>Code Break</h1>
+      <p class="subtitle">Can you crack their code?</p>
+    </div>
+    <div class="card">
+      <div class="field">
+        <label>Room Code</label>
+        <div class="room-row">
+          <input type="text" id="room-input" maxlength="4" placeholder="Enter 4-digit code" class="room-input">
+          <button id="generate-room-btn" class="btn btn-small" title="Generate random room">🎲</button>
+        </div>
+      </div>
+      <div class="field">
+        <label>Your Name</label>
+        <input type="text" id="name-input" placeholder="Enter your name...">
+      </div>
+      <button id="join-btn" class="btn btn-primary" disabled>Join Game</button>
+      <p id="lobby-status" class="status-msg"></p>
+    </div>
+  </div>
+
+  <div id="game-screen" class="screen hidden">
+    <div class="room-badge">Room: <span id="room-code-display"></span></div>
+
+    <div class="game-header">
+      <div class="player-badge" id="my-badge">
+        <span class="badge-dot"></span>
+        <span class="badge-name" id="my-name-display"></span>
+      </div>
+      <div class="vs">VS</div>
+      <div class="player-badge opponent" id="opponent-badge">
+        <span class="badge-dot"></span>
+        <span class="badge-name" id="opponent-name-display">Waiting...</span>
+      </div>
+    </div>
+
+    <div id="setting-phase" class="phase-content hidden">
+      <div class="card">
+        <h2>🤫 Set Your Secret Number</h2>
+        <p class="hint">Choose a number between 1 and 100</p>
+        <div class="secret-input-group">
+          <input type="number" id="secret-input" min="1" max="100" placeholder="?">
+          <button id="set-secret-btn" class="btn btn-secret">Lock It In! 🔒</button>
+        </div>
+        <p id="secret-status" class="status-msg"></p>
+      </div>
+      <div id="opponent-not-ready" class="waiting-box">
+        <span class="pulse-dot"></span> Waiting for opponent to set their number...
+      </div>
+    </div>
+
+    <div id="playing-phase" class="phase-content hidden">
+      <div id="guess-section">
+        <div class="card">
+          <h2 id="turn-indicator">🎯 Your Turn!</h2>
+          <p class="hint" id="target-hint">Guess <span id="opponent-name-guess"></span>'s secret number</p>
+          <div class="guess-input-group">
+            <input type="number" id="guess-input" min="1" max="100" placeholder="Your guess...">
+            <button id="guess-btn" class="btn btn-guess">Guess! 🚀</button>
+          </div>
+          <p id="guess-status" class="status-msg"></p>
+        </div>
+      </div>
+      <div id="my-secret-display" class="secret-badge">
+        🔐 My secret: <span id="my-secret-value">?</span>
+      </div>
+      <div id="guess-history" class="history">
+        <h3>📜 Guess History</h3>
+        <div id="history-list"></div>
+        <p id="history-empty" class="empty-msg">No guesses yet!</p>
+      </div>
+    </div>
+
+    <div id="result-overlay" class="overlay hidden">
+      <div class="result-card">
+        <div class="confetti-container" id="confetti-container"></div>
+        <h1 id="result-title">🎉 You Win!</h1>
+        <p id="result-subtitle">You cracked their code!</p>
+        <p class="secret-reveal" id="secret-reveal"></p>
+        <button id="play-again-btn" class="btn btn-primary">Play Again 🔄</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script type="importmap">
+{
+  "imports": {
+    "yjs": "https://esm.sh/yjs@13.6.10",
+    "y-webrtc": "https://esm.sh/y-webrtc@10.3.0",
+    "lib0": "https://esm.sh/lib0@0.2.94"
+  }
+}
+</script>
+<script type="module" src="/game.js"></script>
+</body>
+</html>
