@@ -18,6 +18,7 @@ export function useGame() {
   const prevPlayerCountRef = useRef(0)
   const announcementTimerRef = useRef(null)
   const joinedRef = useRef(false)
+  const syncInitiatedRef = useRef(new Set())
 
   const [phase, setPhase] = useState(null)
   const [players, setPlayers] = useState([])
@@ -102,6 +103,14 @@ export function useGame() {
 
     if (pCount === 2 && prevPlayerCountRef.current === 1) {
       showAnnouncement(doc)
+      const state = doc.getMap('state')
+      if (state.get('phase') === 'lobby') {
+        queueMicrotask(() => {
+          doc.transact(() => {
+            state.set('phase', 'setting')
+          })
+        })
+      }
     }
 
     prevPlayerCountRef.current = pCount
@@ -234,13 +243,25 @@ export function useGame() {
     })
     signalingRef.current = signaling
 
-    signaling.on('peerconnect', (peer) => {
+    const initiateSync = (peer) => {
+      const clientId = peer.client_id || peer.id
+      if (syncInitiatedRef.current.has(clientId)) return
+      syncInitiatedRef.current.add(clientId)
       const encoder = encoding.createEncoder()
       sync.writeSyncStep1(encoder, doc)
       signaling.send(peer, encoding.toUint8Array(encoder))
+    }
+
+    signaling.on('peerconnect', (peer) => {
+      initiateSync(peer)
     })
 
     signaling.on('msg', (peer, data) => {
+      const clientId = peer.client_id || peer.id
+      if (!syncInitiatedRef.current.has(clientId)) {
+        initiateSync(peer)
+      }
+
       const uint8Array = new Uint8Array(data)
       const decoder = decoding.createDecoder(uint8Array)
       const messageType = decoding.readVarUint(decoder)
