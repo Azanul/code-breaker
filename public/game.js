@@ -1,5 +1,8 @@
 import * as Y from 'yjs'
-import { WebrtcProvider } from 'y-webrtc'
+import * as encoding from 'lib0/encoding'
+import * as decoding from 'lib0/decoding'
+import * as sync from 'y-protocols/sync'
+import P2PCF from 'p2pcf'
 
 const $ = id => document.getElementById(id)
 
@@ -8,14 +11,13 @@ let myName = ''
 let mySecret = null
 let mySecretSet = false
 let doc = null
-let provider = null
+let signaling = null
 let joined = false
 let prevPlayerCount = 0
 let announcementTimer = null
+let applyingSync = false
 
-const SIGNALING_SERVERS = [
-  'wss://code-breaker.aliah.university/signaling',
-]
+const P2PCF_WORKER_URL = 'https://p2pcf.YOUR-WORKER.workers.dev'
 
 function init() {
   $('name-input').addEventListener('input', validateLobby)
@@ -55,7 +57,6 @@ function joinGame() {
   joined = true
 
   doc = new Y.Doc()
-  provider = new WebrtcProvider(roomCode, doc, { signaling: SIGNALING_SERVERS })
 
   const state = doc.getMap('state')
 
@@ -93,6 +94,62 @@ function joinGame() {
     checkGameStart()
     checkPlayerCount()
   })
+
+  doc.on('update', (update, origin) => {
+    if (!signaling || applyingSync) return
+    const encoder = encoding.createEncoder()
+    sync.writeUpdate(encoder, update)
+    signaling.broadcast(encoding.toUint8Array(encoder))
+  })
+
+  signaling = new P2PCF(myId, roomCode, {
+    workerUrl: P2PCF_WORKER_URL,
+  })
+
+  signaling.on('peerconnect', (peer) => {
+    const encoder = encoding.createEncoder()
+    sync.writeSyncStep1(encoder, doc)
+    signaling.send(peer, encoding.toUint8Array(encoder))
+  })
+
+  signaling.on('msg', (peer, data) => {
+    const uint8Array = new Uint8Array(data)
+    const decoder = decoding.createDecoder(uint8Array)
+    const messageType = decoding.readVarUint(decoder)
+
+    switch (messageType) {
+      case sync.messageYjsSyncStep1: {
+        const encoder = encoding.createEncoder()
+        sync.readSyncStep1(decoder, encoder, doc)
+        signaling.send(peer, encoding.toUint8Array(encoder))
+        break
+      }
+      case sync.messageYjsSyncStep2:
+        applyingSync = true
+        sync.readSyncStep2(decoder, doc)
+        applyingSync = false
+        break
+      case sync.messageYjsUpdate:
+        applyingSync = true
+        sync.readUpdate(decoder, doc)
+        applyingSync = false
+        break
+    }
+  })
+
+  signaling.on('peerclose', (peer) => {
+    const state = doc?.getMap('state')
+    if (!state) return
+    const players = state.get('players')
+    if (!players || !peer.client_id) return
+    if (players.has(peer.client_id)) {
+      doc.transact(() => {
+        players.delete(peer.client_id)
+      })
+    }
+  })
+
+  signaling.start()
 
   $('my-name-display').textContent = myName
   $('room-code-display').textContent = roomCode
