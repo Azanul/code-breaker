@@ -1,1 +1,3 @@
+# passthrough for signaling WebSocket — must come before the SPA catch-all
+/signaling  /signaling  200
 /*  /index.html  200
