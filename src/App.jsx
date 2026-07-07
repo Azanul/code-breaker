@@ -23,7 +23,7 @@ export function App() {
           onJoin={game.joinGame}
           onGenerateRoom={game.generateRoomCode}
           canJoin={game.canJoin}
-          status={game.lobbyStatus}
+          status={''}
         />
       ) : (
         <GameScreen
@@ -42,13 +42,16 @@ export function App() {
           announcementVisible={game.announcementVisible}
           announcementText={game.announcementText}
           roomFull={game.roomFull}
-          lobbyStatus={game.lobbyStatus}
           secretStatus={game.secretStatus}
           guessStatus={game.guessStatus}
           setSecret={game.setSecret}
           submitGuess={game.submitGuess}
           resetGame={game.resetGame}
           dismissRoomFull={game.dismissRoomFull}
+          myGuesses={game.myGuesses}
+          opponentGuesses={game.opponentGuesses}
+          myLedger={game.myLedger}
+          opponentLedger={game.opponentLedger}
         />
       )}
     </>

@@ -6,6 +6,60 @@ import * as sync from 'y-protocols/sync'
 import P2PCF from 'p2pcf'
 
 const P2PCF_WORKER_URL = 'https://p2pcf.azanulhaque.workers.dev'
+const CODE_LENGTH = 4
+
+function computeFeedback(guess, secret) {
+  const result = Array(CODE_LENGTH).fill('absent')
+  const secretArr = secret.split('')
+  const guessArr = guess.split('')
+
+  for (let i = 0; i < CODE_LENGTH; i++) {
+    if (guessArr[i] === secretArr[i]) {
+      result[i] = 'correct'
+      secretArr[i] = null
+      guessArr[i] = null
+    }
+  }
+
+  for (let i = 0; i < CODE_LENGTH; i++) {
+    if (guessArr[i] === null) continue
+    const idx = secretArr.indexOf(guessArr[i])
+    if (idx !== -1) {
+      result[i] = 'present'
+      secretArr[idx] = null
+    }
+  }
+
+  return result
+}
+
+function computeLedger(guesses, myId) {
+  const ledger = {}
+  for (let d = 0; d <= 9; d++) ledger[d] = 'unknown'
+
+  const myGuesses = guesses.filter(g => g.guesserId === myId)
+  for (const g of myGuesses) {
+    if (!g.feedback) continue
+    const guessDigits = g.guess.split('')
+    for (let i = 0; i < guessDigits.length; i++) {
+      const digit = parseInt(guessDigits[i])
+      const state = g.feedback[i]
+      if (state === 'correct') {
+        ledger[digit] = 'confirmed'
+      } else if (state === 'present') {
+        if (ledger[digit] !== 'confirmed') ledger[digit] = 'present'
+      } else if (state === 'absent') {
+        if (ledger[digit] === 'unknown') ledger[digit] = 'absent'
+      }
+    }
+  }
+
+  return ledger
+}
+
+function isValidCode(val) {
+  return /^\d{4}$/.test(val)
+}
 
 export function useGame() {
   const myIdRef = useRef(crypto.randomUUID())
@@ -14,7 +68,6 @@ export function useGame() {
   const docRef = useRef(null)
   const signalingRef = useRef(null)
   const mySecretRef = useRef(null)
-  const mySecretSetRef = useRef(false)
   const prevPlayerCountRef = useRef(0)
   const announcementTimerRef = useRef(null)
   const joinedRef = useRef(false)
@@ -31,13 +84,12 @@ export function useGame() {
   const [announcementText, setAnnouncementText] = useState('')
   const [myName, setMyName] = useState('')
   const [roomCode, setRoomCode] = useState('')
-  const [mySecretDisplay, setMySecretDisplay] = useState(null)
-  const [mySecretSetDisplay, setMySecretSetDisplay] = useState(false)
-  const [lobbyStatus, setLobbyStatus] = useState('')
   const [secretStatus, setSecretStatus] = useState('')
   const [guessStatus, setGuessStatus] = useState('')
   const [roomInput, setRoomInput] = useState('')
   const [nameInput, setNameInput] = useState('')
+  const [mySecretDisplay, setMySecretDisplay] = useState(null)
+  const [mySecretSetDisplay, setMySecretSetDisplay] = useState(false)
 
   const opponentId = players.find(p => p.id !== myId)?.id || null
   const opponentName = players.find(p => p.id !== myId)?.name || null
@@ -53,18 +105,17 @@ export function useGame() {
     for (let i = 0; i < guesses.length; i++) {
       const g = guesses.get(i)
       if (!g || !(g instanceof Y.Map)) continue
-      if (g.get('result') !== null) continue
+      const existingFeedback = g.get('feedback')
+      if (existingFeedback !== null && existingFeedback !== undefined) continue
       if (g.get('targetId') !== myId) continue
 
       const guessVal = g.get('guess')
-      let result
-      if (guessVal === mySecretRef.current) result = 'correct'
-      else if (guessVal < mySecretRef.current) result = 'higher'
-      else result = 'lower'
+      const feedbackArr = computeFeedback(guessVal, mySecretRef.current)
+      const yFeedback = new Y.Array()
+      yFeedback.insert(0, feedbackArr)
+      g.set('feedback', yFeedback)
 
-      g.set('result', result)
-
-      if (result === 'correct') {
+      if (feedbackArr.every(f => f === 'correct')) {
         const winnerId = g.get('guesserId')
         state.set('winner', winnerId)
         state.set('phase', 'finished')
@@ -160,11 +211,16 @@ export function useGame() {
     for (let i = 0; i < yGuesses.length; i++) {
       const g = yGuesses.get(i)
       if (g && g.get) {
+        const rawFeedback = g.get('feedback')
+        let feedback = null
+        if (rawFeedback && rawFeedback.toArray) {
+          feedback = rawFeedback.toArray()
+        }
         gList.push({
           guesserId: g.get('guesserId'),
           targetId: g.get('targetId'),
           guess: g.get('guess'),
-          result: g.get('result'),
+          feedback,
         })
       }
     }
@@ -303,16 +359,14 @@ export function useGame() {
     observer()
   }, [myId, nameInput, roomInput, processGuesses, syncState, checkGameStart, checkPlayerCount])
 
-  const setSecret = useCallback(() => {
+  const setSecret = useCallback((val) => {
     const doc = docRef.current
     if (!doc) return
-    const val = parseInt(document.getElementById('secret-input').value)
-    if (isNaN(val) || val < 1 || val > 100) {
-      setSecretStatus('> INVALID CODE (1-100)')
+    if (!val || !isValidCode(val)) {
+      setSecretStatus('> INVALID CODE (4 DIGITS, 0-9)')
       return
     }
     mySecretRef.current = val
-    mySecretSetRef.current = true
     setMySecretDisplay(val)
     setMySecretSetDisplay(true)
     setSecretStatus('> CODE LOCKED')
@@ -324,16 +378,15 @@ export function useGame() {
     }
   }, [myId])
 
-  const submitGuess = useCallback(() => {
+  const submitGuess = useCallback((val) => {
     const doc = docRef.current
     if (!doc) return
     const state = doc.getMap('state')
     if (state.get('phase') !== 'playing') return
     if (state.get('currentTurn') !== myId) return
 
-    const val = parseInt(document.getElementById('guess-input').value)
-    if (isNaN(val) || val < 1 || val > 100) {
-      setGuessStatus('> INVALID TARGET (1-100)')
+    if (!val || !isValidCode(val)) {
+      setGuessStatus('> INVALID TARGET (4 DIGITS, 0-9)')
       return
     }
 
@@ -342,7 +395,6 @@ export function useGame() {
     if (!oppId) return
 
     setGuessStatus('')
-    document.getElementById('guess-input').value = ''
 
     const guesses = doc.getArray('guesses')
     doc.transact(() => {
@@ -350,7 +402,7 @@ export function useGame() {
       entry.set('guesserId', myId)
       entry.set('targetId', oppId)
       entry.set('guess', val)
-      entry.set('result', null)
+      entry.set('feedback', null)
       guesses.push([entry])
       state.set('currentTurn', oppId)
     })
@@ -381,7 +433,6 @@ export function useGame() {
       }
     })
     mySecretRef.current = null
-    mySecretSetRef.current = false
     setMySecretDisplay(null)
     setMySecretSetDisplay(false)
     prevPlayerCountRef.current = 0
@@ -402,6 +453,11 @@ export function useGame() {
     }
   }, [])
 
+  const myGuesses = guesses.filter(g => g.guesserId === myId)
+  const opponentGuesses = guesses.filter(g => g.guesserId === opponentId)
+  const myLedger = computeLedger(guesses, myId)
+  const opponentLedger = computeLedger(guesses, opponentId)
+
   return {
     myId,
     myName,
@@ -415,15 +471,14 @@ export function useGame() {
     roomFull,
     announcementVisible,
     announcementText,
-    mySecretDisplay,
-    mySecretSetDisplay,
     opponentId,
     opponentName,
     opponentReady,
     isMyTurn,
     canJoin,
-    lobbyStatus,
     secretStatus,
+    mySecretDisplay,
+    mySecretSetDisplay,
     guessStatus,
     roomInput,
     nameInput,
@@ -437,6 +492,9 @@ export function useGame() {
     dismissRoomFull,
     setGuessStatus,
     setSecretStatus,
-    setLobbyStatus,
+    myGuesses,
+    opponentGuesses,
+    myLedger,
+    opponentLedger,
   }
 }

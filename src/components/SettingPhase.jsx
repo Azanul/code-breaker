@@ -1,4 +1,4 @@
-import { useRef, useEffect } from 'react'
+import { useRef, useEffect, useState } from 'react'
 
 export function SettingPhase({
   mySecretSet,
@@ -8,6 +8,7 @@ export function SettingPhase({
   status,
 }) {
   const inputRef = useRef(null)
+  const [code, setCode] = useState('')
 
   useEffect(() => {
     if (!mySecretSet && inputRef.current) {
@@ -15,27 +16,34 @@ export function SettingPhase({
     }
   }, [mySecretSet])
 
+  const handleLock = () => {
+    if (mySecretSet || code.length !== 4) return
+    onSetSecret(code)
+    setCode('')
+  }
+
   return (
     <div className="phase-content">
       <div className="card">
-        <h2 className="section-title">{'>> SET SECRET NUMBER'}</h2>
-        <p className="section-hint">Choose 1 — 100</p>
+        <h2 className="section-title">{'>> SET YOUR CODE'}</h2>
+        <p className="section-hint">4 digits (0-9)</p>
         <div className="secret-input-group">
           <input
             ref={inputRef}
             id="secret-input"
-            type="number"
-            min={1}
-            max={100}
-            placeholder="??"
+            type="text"
+            maxLength={4}
+            placeholder="----"
             className="input-pixel input-lg"
             disabled={mySecretSet}
-            onKeyDown={e => { if (e.key === 'Enter' && !mySecretSet) onSetSecret() }}
+            value={code}
+            onChange={e => setCode(e.target.value.replace(/\D/g, '').slice(0, 4))}
+            onKeyDown={e => { if (e.key === 'Enter') handleLock() }}
           />
           <button
             className="btn btn-secret"
-            disabled={mySecretSet}
-            onClick={onSetSecret}
+            disabled={mySecretSet || code.length !== 4}
+            onClick={handleLock}
           >
             LOCK IN
           </button>

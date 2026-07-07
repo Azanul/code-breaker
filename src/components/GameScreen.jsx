@@ -22,13 +22,16 @@ export function GameScreen({
   announcementVisible,
   announcementText,
   roomFull,
-  lobbyStatus,
   secretStatus,
   guessStatus,
   setSecret,
   submitGuess,
   resetGame,
   dismissRoomFull,
+  myGuesses,
+  opponentGuesses,
+  myLedger,
+  opponentLedger,
 }) {
   const opponentExists = players.length >= 2
   const isWinner = winner === myId
@@ -38,14 +41,18 @@ export function GameScreen({
       <StatusBar roomCode={roomCode} />
       <AnnouncementBanner visible={announcementVisible} text={announcementText} />
 
-      <div className="game-header">
-        <PlayerPanel label="P1" name={myName} />
-        <div className="vs-display">VS</div>
-        <PlayerPanel label="P2" name={opponentName || 'WAITING...'} isOpponent />
-      </div>
-
-      {(!phase || phase === 'lobby') && lobbyStatus && (
-        <p className="status-msg">{lobbyStatus}</p>
+      {(!phase || phase === 'lobby') && (
+        <div className="game-header">
+          <div className="player-panel">
+            <span className="panel-label">YOU</span>
+            <span className="panel-name">{myName}</span>
+          </div>
+          <div className="vs-display">VS</div>
+          <div className="player-panel">
+            <span className="panel-label">OPPONENT</span>
+            <span className="panel-name">{opponentName || 'WAITING...'}</span>
+          </div>
+        </div>
       )}
 
       {phase === 'setting' && (
@@ -62,12 +69,15 @@ export function GameScreen({
         <PlayingPhase
           isMyTurn={isMyTurn}
           opponentName={opponentName}
-          mySecretDisplay={mySecretDisplay}
-          guesses={guesses}
           myId={myId}
           myName={myName}
           onSubmitGuess={submitGuess}
           guessStatus={guessStatus}
+          myGuesses={myGuesses}
+          opponentGuesses={opponentGuesses}
+          myLedger={myLedger}
+          opponentLedger={opponentLedger}
+          mySecretSetDisplay={mySecretSetDisplay}
         />
       )}
 
