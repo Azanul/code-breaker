@@ -17,7 +17,7 @@ let prevPlayerCount = 0
 let announcementTimer = null
 let applyingSync = false
 
-const P2PCF_WORKER_URL = 'https://p2pcf.YOUR-WORKER.workers.dev'
+const P2PCF_WORKER_URL = 'https://p2pcf.azanulhaque.workers.dev'
 
 function init() {
   $('name-input').addEventListener('input', validateLobby)
