@@ -15,7 +15,6 @@ let signaling = null
 let joined = false
 let prevPlayerCount = 0
 let announcementTimer = null
-let applyingSync = false
 
 const P2PCF_WORKER_URL = 'https://p2pcf.azanulhaque.workers.dev'
 
@@ -64,11 +63,10 @@ function joinGame() {
     if (!state.get('phase')) state.set('phase', 'lobby')
     if (!state.get('winner')) state.set('winner', null)
     if (!state.get('currentTurn')) state.set('currentTurn', null)
-    if (!state.get('players')) state.set('players', new Y.Map())
-    if (!state.get('guesses')) state.set('guesses', new Y.Array())
   })
 
-  const players = state.get('players')
+  const players = doc.getMap('players')
+  const guesses = doc.getArray('guesses')
 
   const existingCount = players.size
   const iAmInside = players.has(myId)
@@ -96,7 +94,8 @@ function joinGame() {
   })
 
   doc.on('update', (update, origin) => {
-    if (!signaling || applyingSync) return
+    if (!signaling) return
+    if (origin === 'p2pcf-sync') return
     const encoder = encoding.createEncoder()
     sync.writeUpdate(encoder, update)
     signaling.broadcast(encoding.toUint8Array(encoder))
@@ -125,14 +124,14 @@ function joinGame() {
         break
       }
       case sync.messageYjsSyncStep2:
-        applyingSync = true
-        sync.readSyncStep2(decoder, doc)
-        applyingSync = false
+        doc.transact(() => {
+          sync.readSyncStep2(decoder, doc)
+        }, 'p2pcf-sync')
         break
       case sync.messageYjsUpdate:
-        applyingSync = true
-        sync.readUpdate(decoder, doc)
-        applyingSync = false
+        doc.transact(() => {
+          sync.readUpdate(decoder, doc)
+        }, 'p2pcf-sync')
         break
     }
   })
@@ -140,7 +139,7 @@ function joinGame() {
   signaling.on('peerclose', (peer) => {
     const state = doc?.getMap('state')
     if (!state) return
-    const players = state.get('players')
+    const players = doc.getMap('players')
     if (!players || !peer.client_id) return
     if (players.has(peer.client_id)) {
       doc.transact(() => {
@@ -167,7 +166,7 @@ function updateUI() {
   const state = doc?.getMap('state')
   if (!state) return
 
-  const players = state.get('players')
+  const players = doc.getMap('players')
   const opponentId = getOpponentId()
   const phase = state.get('phase')
   const currentTurn = state.get('currentTurn')
@@ -255,7 +254,7 @@ function updateUI() {
 function renderHistory() {
   const state = doc?.getMap('state')
   if (!state) return
-  const guesses = state.get('guesses')
+  const guesses = doc.getArray('guesses')
   const list = $('history-list')
   const empty = $('history-empty')
   if (!guesses || guesses.length === 0) {
@@ -297,7 +296,7 @@ function renderHistory() {
 function processGuesses() {
   const state = doc?.getMap('state')
   if (!state) return
-  const guesses = state.get('guesses')
+  const guesses = doc.getArray('guesses')
   if (!guesses || mySecret === null) return
 
   for (let i = 0; i < guesses.length; i++) {
@@ -327,7 +326,7 @@ function checkGameStart() {
   const state = doc?.getMap('state')
   if (!state) return
   if (state.get('phase') !== 'setting') return
-  const players = state.get('players')
+  const players = doc.getMap('players')
   if (!players || players.size < 2) return
   const allReady = Array.from(players.values()).every(p => p.get('ready') === true)
   if (!allReady) return
@@ -352,7 +351,7 @@ function setSecret() {
   $('secret-input').disabled = true
 
   const state = doc.getMap('state')
-  const players = state.get('players')
+  const players = doc.getMap('players')
   const me = players.get(myId)
   if (me) {
     doc.transact(() => me.set('ready', true))
@@ -377,7 +376,7 @@ function submitGuess() {
   $('guess-status').textContent = ''
   $('guess-input').value = ''
 
-  const guesses = state.get('guesses')
+  const guesses = doc.getArray('guesses')
   doc.transact(() => {
     const entry = new Y.Map()
     entry.set('guesserId', myId)
@@ -436,14 +435,14 @@ function resetGame() {
     state.set('phase', 'lobby')
     state.set('winner', null)
     state.set('currentTurn', null)
-    const guesses = state.get('guesses')
+    const guesses = doc.getArray('guesses')
     if (guesses) {
       const len = guesses.length
       for (let i = len - 1; i >= 0; i--) {
         guesses.delete(i)
       }
     }
-    const players = state.get('players')
+    const players = doc.getMap('players')
     if (players) {
       const me = players.get(myId)
       if (me) {
@@ -468,7 +467,7 @@ function resetGame() {
 function checkPlayerCount() {
   const state = doc?.getMap('state')
   if (!state || !joined) return
-  const players = state.get('players')
+  const players = doc.getMap('players')
   if (!players) return
 
   const pCount = players.size
@@ -521,7 +520,7 @@ function showRoomFullError() {
 function getOpponentId() {
   const state = doc?.getMap('state')
   if (!state) return null
-  const players = state.get('players')
+  const players = doc.getMap('players')
   if (!players) return null
   return Array.from(players.keys()).find(id => id !== myId) || null
 }
@@ -529,7 +528,7 @@ function getOpponentId() {
 function getOpponentName() {
   const state = doc?.getMap('state')
   if (!state) return null
-  const players = state.get('players')
+  const players = doc.getMap('players')
   if (!players) return null
   const opp = getOpponentId()
   return opp && players.get(opp) ? players.get(opp).get('name') : null
