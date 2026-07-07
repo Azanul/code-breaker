@@ -1,20 +1,19 @@
 # Design System: CODE-BREAK
 
-> Retro terminal aesthetic for a peer-to-peer 2-player code-breaking game.
+> Bubbly, playful, NYT Wordle-inspired aesthetic for a peer-to-peer 2-player code-breaking game.
 
 ## Overview
 
 CODE-BREAK is a deduction game, not a guessing game.
 
-Each player secretly chooses a numeric code. Players alternate making guesses, receiving per-digit feedback after every attempt. Every turn permanently expands each player's investigation board until one player reconstructs the opponent's code.
+Each player secretly chooses a code. Players alternate making guesses, receiving per-cell feedback after every attempt. Every turn permanently expands each player's grid until one player reconstructs the opponent's code.
 
-The UI should feel like a shared arcade terminal from the 80s:
-- CRT monitor
-- phosphor glow
-- pixel fonts
-- scanlines
-- neon purple interface
-- immediate arcade feedback
+The UI should feel like a friendly, tactile word game you'd play over morning coffee:
+- clean rounded cells with satisfying flip animations
+- soft shadows and gentle depth
+- bubbly sans-serif type
+- playful personality without being childish
+- immediate, celebratory feedback
 
 No accounts. No matchmaking. Share a 4-digit room code and play.
 
@@ -23,16 +22,16 @@ No accounts. No matchmaking. Share a 4-digit room code and play.
 ## Core Gameplay
 
 1. Join a room.
-2. Both players enter a secret code.
-3. Players alternate turns.
-4. Every guess is added to the player's attempt history.
-5. Every guessed digit receives one of three states:
+2. The first player sets code length and allowed symbol set (decimal, hex, letters+numbers, all letters).
+3. Both players secretly choose a code from the agreed-upon set.
+4. Players alternate turns typing guesses into a row of cells.
+5. Every guessed cell receives one of three states:
 
 | State | Meaning |
 |--------|---------|
-| Absent | Digit does not exist anywhere in the secret code. |
-| Present | Digit exists but is in another position. |
-| Correct | Digit exists in the correct position. |
+| Absent | Symbol does not exist anywhere in the secret code. |
+| Present | Symbol exists but is in another position. |
+| Correct | Symbol exists in the correct position. |
 
 6. First player to completely reveal the opponent's code wins.
 
@@ -40,9 +39,9 @@ No accounts. No matchmaking. Share a 4-digit room code and play.
 
 # Design Principles
 
-## Every screen is a terminal
+## Friendly and tactile
 
-Everything belongs on a CRT monitor.
+Everything feels soft, rounded, and satisfying to interact with—like popping bubble wrap or tapping tiles.
 
 ## Information accumulates
 
@@ -54,9 +53,9 @@ Nothing disappears.
 
 The left and right boards mirror each other.
 
-## Glow communicates
+## Color communicates
 
-Glow is reserved for:
+Color is reserved for:
 - active turn
 - new feedback
 - victory
@@ -77,8 +76,8 @@ No loading screens.
 + Left Player Board
 
 - Player header
-- Attempt Grid
-- Digit Ledger
+- Guess Grid (Wordle-style)
+- Symbol Reference Bar
 
 + Center Rail
 
@@ -86,12 +85,13 @@ No loading screens.
 - Connection Status
 - Turn Indicator
 - Announcement Banner
+- Pre-game Setup Panel
 
 + Right Player Board
 
 - Player header
-- Attempt Grid
-- Digit Ledger
+- Guess Grid (Wordle-style)
+- Symbol Reference Bar
 
 ---
 
@@ -101,76 +101,79 @@ No loading screens.
 
 Contains:
 
-- player name
-- connection state
+- player name with playful badge
+- connection state dot
 - turn indicator
-- attempt grid
-- digit ledger
+- guess grid
+- symbol reference bar
 
-## Attempt Grid
+## Guess Grid
 
-Chronological history of guesses.
+Wordle-style grid of rows.
 
-Each row contains
+Each row contains a set of cells — one per symbol in the code.
 
-- attempt number
-- guessed code
-- feedback cells
+Newest row animates in with a staggered cell flip (like Wordle).
 
-Newest row animates into view.
+Older rows remain visible, letting deduction patterns emerge over time.
 
-Older rows remain visible.
+## Guess Cell
 
-## Feedback Cell
-
-Every digit has one feedback cell.
+Every guessed symbol occupies one cell.
 
 ### Absent
 
-Muted border.
+Dark gray fill.
 
-Dark fill.
-
-No glow.
+No animation emphasis.
 
 ### Present
 
-Amber border.
+Amber / goldenrod fill.
 
-Amber glow.
+Gentle wobble on reveal.
 
 ### Correct
 
-Emerald border.
+Kelly-green fill.
 
-Bright glow.
+Celebratory pop on reveal.
 
-Never rely on color alone.
+Symbol text animates in with a flip from the back of the cell.
 
-Use distinct icons/patterns.
+Never rely on color alone — use distinct symbols or patterns alongside color.
 
-## Digit Ledger
+## Symbol Reference Bar
 
-Vertical list of digits 0-9.
+A horizontal row of all allowed symbols (e.g. 0–9, A–F, etc.).
 
 Purpose:
 
-External memory for deductions.
+Quick visual reference for which symbols have been ruled out or confirmed.
 
 States
 
-- Unknown
-- Absent
-- Present
-- Confirmed
+- Unknown (default)
+- Absent (struck through or dimmed)
+- Present (highlighted amber)
+- Confirmed (highlighted green)
 
 Updates immediately after every turn.
+
+## Pre-game Setup Panel
+
+Appears before the match begins, controlled by the first player:
+
+- **Code length** — a bubbly toggle / selector for number of cells (e.g. 3–6).
+- **Allowed entry set** — playful selector cards for decimal, hex, letters+numbers, all letters.
+
+The second player sees the chosen settings upon joining.
 
 ## Turn Indicator
 
 Always visible.
 
-Uses cyan pulse.
+Uses a soft bounce or pulse animation.
 
 There should never be ambiguity about whose turn it is.
 
@@ -178,48 +181,69 @@ There should never be ambiguity about whose turn it is.
 
 # Motion
 
-Guess submission
+### Guess submission
 
-1. Guess row inserts.
-2. Feedback reveals left to right.
-3. Ledger updates.
-4. Turn indicator switches.
+1. Guess row inserts at the top of the grid.
+2. Cells flip one by one (left to right) with a 3D rotation revealing the feedback color and symbol.
+3. Symbol reference bar updates with a gentle fade.
+4. Turn indicator bounces to the other player.
 
-Respect prefers-reduced-motion.
+### Cell flip
+
+Front face = the guessed symbol on a neutral background.
+
+Back face = the feedback color with symbol re-vealed.
+
+Duration: ~300ms per cell, staggered by ~100ms.
+
+### Victory
+
+Confetti-like particle burst or celebration banner.
+
+Respect `prefers-reduced-motion`.
 
 ---
 
 # Color Semantics
 
-Purple
-: Interface chrome
+Background
+: Off-white / warm paper (#F8F6F0)
 
-Cyan
-: Active player / current turn
+Cell default
+: Light gray border, white fill
 
-Amber
-: Present digit
+Cell absent
+: Dark gray fill (#787C7E)
 
-Emerald
-: Correct digit
+Cell present
+: Goldenrod / amber (#C9B458)
 
-Gray
-: Absent digit
+Cell correct
+: Kelly green (#6AAA64)
 
-Red
-: Blocking errors only
+Active player
+: Soft blue accent
+
+Text
+: Dark charcoal (#1A1A1B)
+
+Blocking errors
+: Soft red
 
 ---
 
 # Typography
 
-Display:
-Press Start 2P
+System / interface:
+**Helvetica Neue**, **Arial**, or NYT-style serif (e.g. **Karnak**) for headings
 
-Body:
-VT323
+Grid cells:
+Bold, clean sans-serif — symbols should be unmistakable at a glance
 
-Never use modern sans-serif fonts.
+Avoid:
+- pixel fonts
+- monospace-only constraints
+- retro / terminal typefaces
 
 ---
 
@@ -228,17 +252,18 @@ Never use modern sans-serif fonts.
 - Semantic HTML
 - Keyboard playable
 - Focus visible
-- Do not rely on color alone
-- Respect prefers-reduced-motion
+- Do not rely on color alone — use patterns, icons, or text labels per cell state
+- Respect `prefers-reduced-motion`
+- Sufficient color contrast on all cell states
 
 ---
 
 # Don't
 
+- Don't use retro / CRT / terminal aesthetics.
 - Don't use higher/lower mechanics.
 - Don't use battle log terminology.
 - Don't hide previous guesses.
-- Don't use rounded mobile-game UI.
 - Don't require accounts.
 
 # Do
@@ -246,5 +271,6 @@ Never use modern sans-serif fonts.
 - Make deduction the hero.
 - Show both players' progress simultaneously.
 - Keep all attempts visible.
-- Keep the digit ledger persistent.
+- Keep the symbol reference bar persistent.
 - Make the current turn unmistakable.
+- Make the interface feel playful and tactile — something you'd want to tap.
