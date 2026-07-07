@@ -65,7 +65,7 @@ body {
 }
 
 /* ---------- Layout ---------- */
-#app {
+#root {
   position: relative;
   z-index: 1;
   width: 100%;
@@ -73,8 +73,12 @@ body {
   padding: 16px;
 }
 
-.screen { display: flex; flex-direction: column; align-items: center; gap: 16px; }
-.screen.hidden { display: none; }
+.screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
 
 /* ---------- Logo ---------- */
 .logo { text-align: center; margin-bottom: 8px; }
@@ -361,7 +365,6 @@ input[type="number"] { -moz-appearance: textfield; }
   border-radius: 2px;
   animation: banner-flash 0.3s ease-out;
 }
-.announcement-banner.hidden { display: none; }
 
 @keyframes banner-flash {
   from { opacity: 0; transform: scale(0.95); }
@@ -416,7 +419,13 @@ input[type="number"] { -moz-appearance: textfield; }
 }
 
 /* ---------- Phase content ---------- */
-.phase-content.hidden { display: none; }
+.phase-content {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+}
 
 /* ---------- Secret display ---------- */
 .secret-display {
@@ -511,7 +520,7 @@ input[type="number"] { -moz-appearance: textfield; }
   z-index: 100;
   animation: fade-in 0.3s ease-out;
 }
-.overlay.hidden { display: none; }
+
 @keyframes fade-in {
   from { opacity: 0; }
   to { opacity: 1; }
@@ -530,6 +539,7 @@ input[type="number"] { -moz-appearance: textfield; }
   overflow: hidden;
   animation: pop-in 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
 }
+
 @keyframes pop-in {
   from { transform: scale(0.85); opacity: 0; }
   to { transform: scale(1); opacity: 1; }
@@ -597,7 +607,7 @@ input[type="number"] { -moz-appearance: textfield; }
 
 /* ---------- Responsive ---------- */
 @media (max-width: 520px) {
-  #app { padding: 10px; }
+  #root { padding: 10px; }
   .card { padding: 18px 14px; }
   .logo-title { font-size: 24px; }
   .secret-input-group, .guess-input-group { flex-direction: column; }

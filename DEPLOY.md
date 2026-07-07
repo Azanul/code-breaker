@@ -31,12 +31,11 @@ with your actual worker URL.
 
 ## 3. Deploy Pages project
 
-No build step needed. Deploy the `public/` directory to Cloudflare Pages:
+Build then deploy the `dist/` directory:
 
 ```bash
-npx wrangler pages deploy public --project-name code-break
+npm run build
+npx wrangler pages deploy dist --project-name code-break
 ```
 
-Or via the dashboard: connect your git repo, set build command to empty, set build output to `public`.
-
-**Important:** Pages Functions are no longer used — only static assets + `_redirects`.
+Or via the dashboard: connect your git repo, set build command to `npm run build`, set build output to `dist`.
