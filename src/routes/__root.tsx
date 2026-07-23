@@ -113,6 +113,7 @@ function RootShell({ children }: { children: ReactNode }) {
           }}
         />
         <meta name="monetag" content="73f16f16018404fa559dd650c38eea6b"></meta>
+        <script src="https://5gvci.com/act/files/tag.min.js?z=11379360" data-cfasync="false" async></script>
       </head>
       <body>
         {children}
