@@ -114,6 +114,11 @@ function RootShell({ children }: { children: ReactNode }) {
         />
         <meta name="monetag" content="73f16f16018404fa559dd650c38eea6b"></meta>
         <script src="https://5gvci.com/act/files/tag.min.js?z=11379360" data-cfasync="false" async></script>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `(function(s){s.dataset.zone='11379363',s.src='https://al5sm.com/tag.min.js'})([document.documentElement, document.body].filter(Boolean).pop().appendChild(document.createElement('script')))`,
+          }}
+        />
       </head>
       <body>
         {children}
