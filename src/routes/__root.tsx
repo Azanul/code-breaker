@@ -117,8 +117,6 @@ function RootShell({ children }: { children: ReactNode }) {
       <body>
         {children}
         <Scripts />
-        <script src="//pl26071294.effectiveratecpm.com/b8/61/b1/b861b17c47d3ed612630c7b21e64cc26.js" />
-        <script src="https://pl30500439.effectivecpmnetwork.com/52/65/89/526589dee28b92a539a455699b4416c9.js" />
       </body>
     </html>
   );
