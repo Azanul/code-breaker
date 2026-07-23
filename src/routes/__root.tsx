@@ -107,10 +107,12 @@ function RootShell({ children }: { children: ReactNode }) {
     <html lang="en">
       <head>
         <HeadContent />
+        <script data-cfasync="false" src="https://pl30500451.effectivecpmnetwork.com/49/d9/3e/49d93e482c27b1d687d8a5b098b6c1fe.js"></script>
       </head>
       <body>
         {children}
         <Scripts />
+        <script data-cfasync="false" src="https://pl30500453.effectivecpmnetwork.com/df/31/e7/df31e7d77ce3ec1dbd3e911a2d9c08f2.js"></script>
       </body>
     </html>
   );
